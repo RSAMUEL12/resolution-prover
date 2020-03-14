@@ -97,7 +97,7 @@ singlestep([Conjunction | Rest], New) :-
     remove(Beta, Conjunction, Temporary), 
     Newconone = [Betaone | Temporary],
     Newcontwo = [Betatwo | Temporary], 
-    New = [Newconeone, Newcontwo | Rest].
+    New = [Newconone, Newcontwo | Rest].
 
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
