@@ -2,7 +2,7 @@
 
 ?-op(140, fy, neg).
 ?-op(160, xfy, [and, or, imp, revimp, uparrow, downarrow, 
-               notimp, notrevimp]).
+               notimp, notrevimp, equiv, notequiv]).
 
 /*member(Item, List :- Item ocurs in List */
 
@@ -29,6 +29,8 @@ conjunctive(neg(_ uparrow _)).
 conjunctive(_ downarrow _).
 conjunctive(_ notimp _).
 conjunctive(_ notrevimp _).
+conjunctive(_ equiv _).
+conjunctive(neg(_ notequiv _)).
 
 /* disjunctive(X) :- X is a beta formula. */
 
@@ -40,6 +42,8 @@ disjunctive(_ uparrow _).
 disjunctive(neg(_ downarrow _)).
 disjunctive(neg(_ notimp _)).
 disjunctive(neg(_ notrevimp _)).
+disjunctive(_ notequiv _).
+disjunctive(neg(_ equiv _)).
 
 /* unary(X) :- X is a double negation or a negated constant. */
 
@@ -66,6 +70,15 @@ components(X notimp Y, X, neg Y).
 components(neg(X notimp Y), neg X, Y).
 components(X notrevimp Y, neg X, Y).
 components(neg(X notrevimp Y), X, neg Y).
+/* New equiv and notequiv components */
+components(X equiv Y, X imp Y, Y imp X).
+components(neg(X equiv Y), neg(X imp Y), neg(Y imp X)).
+components(X notequiv Y, neg(X imp Y), neg(Y imp X)).
+components(neg(X notequiv Y), X imp Y, Y imp X).
+/*
+components(X equiv Y, neg X and neg Y , X or Y).
+components(neg(X equiv Y), neg X and Y, X and neg Y).
+components(X notequiv Y, neg X and Y, X and neg Y). */
 
 /* component(X, Y) :- Y is the component of the unary formula X */
 
