@@ -84,7 +84,7 @@ singlestep([Conjunction | Rest], New) :- member(Formula, Conjunction), unary(For
 
 singlestep([Conjunction | Rest], New) :- 
     member(Alpha, Conjunction), 
-    conjunctive(Alpha),
+    disjunctive(Alpha),
     components(Alpha, Alphaone, Alphatwo), 
     remove(Alpha, Conjunction, Temporary),
     Newcon = [Alphaone, Alphatwo | Temporary], 
@@ -92,7 +92,7 @@ singlestep([Conjunction | Rest], New) :-
 
 singlestep([Conjunction | Rest], New) :- 
     member(Beta, Conjunction), 
-    disjunctive(Beta),
+    conjunctive(Beta),
     components(Beta, Betaone, Betatwo), 
     remove(Beta, Conjunction, Temporary), 
     Newconone = [Betaone | Temporary],
@@ -105,6 +105,6 @@ singlestep([Conjunction|Rest], [Conjunction|Newrest]) :-
 expand(Dis, Newdis) :- singlestep(Dis, Temp), expand(Temp, Newdis).
 expand(Dis, Dis).
 
-dualclauseform(X, Y) :- expand([[X]], Y).
+clauseform(X, Y) :- expand([[X]], Y).
 
 
