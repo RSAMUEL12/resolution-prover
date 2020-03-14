@@ -15,7 +15,7 @@ member(X, [_ | Tail]) :- member(X, Tail).
  */
 
 remove(X, [ ], [ ]).
-remove(X, [X | Tail], Newtail) : -remove(X, Tail , Newtail).
+remove(X, [X | Tail], Newtail) :- remove(X, Tail , Newtail).
 remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
 
 /* conjunction(X) :- X is an alpha formula.
