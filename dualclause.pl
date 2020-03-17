@@ -118,24 +118,43 @@ singlestep([Conjunction|Rest], [Conjunction|Newrest]) :-
 expand(Dis, Newdis) :- singlestep(Dis, Temp), resolution(Temp, Newtemp), expand(Newtemp, Newdis).
 expand(Dis, Dis).
 
-resolution(List, Newnewlist) :- resolutionstep(List, Newlist), resolution(Newlist, Newnewlist).
-resolution(List, Newnewlist) :- resolutionstep_neg(List, Newlist), resolution(Newlist, Newnewlist).
-
+resolution(List, Final) :- resolutionstep(List, [[H | T] | Tail]), resolution([T | Tail], Result), attachHead(H, Result, Final).
 resolution(List, List).
 
-resolutionstep([[Head|Temp]|Tail], Newlist) :- 
-    member([neg(Head)], Tail), /* Finds if there is a neg version of the first value in the list of disj */
-    remove([neg(Head)], Tail, List1),
-    remove(Head, [Head|Temp], List2),
-    append(List1, List2, Newlist).
+resolutionstep([[H | T], Head2 | Tail], Result) :-
+    member(neg(H), Head2),
+    remove(neg(H), Head2, List1),
+    remove(H, [H | T], List2),
+    append(List1, List2, Newlist),
+    Result = [Newlist | Tail].
 
-resolutionstep_neg([[Head|Temp]|Tail], Newlist) :- 
-    unary(neg(Head)), /* deal with any double complements */
-    component(neg(Head), New),
-    member([New], Tail), /* Finds if there is a neg version of the first value in the list of disj */
-    remove([New], Tail, List1),
-    remove(Head, [Head|Temp], List2),
-    append(List1, List2, Newlist).
+/*resolutionstep([[H | T], Head2 | Tail], []).*/
+
+/* Dealing with double complements */
+resolutionstep([[H | T], Head2 | Tail], Result) :-
+    unary(neg(H)),
+    component(neg(H), NewH),
+    member(NewH, Head2),
+    remove(NewH, Head2, List1),
+    remove(H, [H | T], List2),
+    append(List1, List2, Newlist),
+    Result = [Newlist | Tail].
+
+resolutionstep([Head1, Head2, Head3 | Tail], Newlist) :-
+    resolutionstep([Head1, Head3 | Tail], List2), !,
+    append(List2, [Head2], Newlist).
+
+resolutionstep([Head1, Head2 | [ ]], [Head1, Head2 | [ ]]).
+
+/* Adding back the first element of the list to the head */
+attachHead(H, [Head | Tail], Newlist) :-
+    Newhead = [H | Head],
+    append([Newhead], Tail, Newlist).
+
+attachHead(H, [Head], [Newhead]) :-
+    Newhead = [[H] | Head].
+
+attachHead(H, [[ ]], [[H]]).
 
 /*
 Need to remove all occurrences of X in one list, and neg(X) in the other list,
