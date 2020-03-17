@@ -96,27 +96,62 @@ singlestep([Conjunction | Rest], New) :- member(Formula, Conjunction), unary(For
     New = [Newconjunction | Rest].
 
 singlestep([Conjunction | Rest], New) :- 
-    member(Alpha, Conjunction), 
-    disjunctive(Alpha),
-    components(Alpha, Alphaone, Alphatwo), 
-    remove(Alpha, Conjunction, Temporary),
-    Newcon = [Alphaone, Alphatwo | Temporary], 
+    member(Beta, Conjunction), 
+    disjunctive(Beta),
+    components(Beta, Betaone, Betatwo), 
+    remove(Beta, Conjunction, Temporary),
+    Newcon = [Betaone, Betatwo | Temporary], 
     New = [Newcon | Rest].
 
 singlestep([Conjunction | Rest], New) :- 
-    member(Beta, Conjunction), 
-    conjunctive(Beta),
-    components(Beta, Betaone, Betatwo), 
-    remove(Beta, Conjunction, Temporary), 
-    Newconone = [Betaone | Temporary],
-    Newcontwo = [Betatwo | Temporary], 
+    member(Alpha, Conjunction), 
+    conjunctive(Alpha),
+    components(Alpha, Alphaone, Alphatwo), 
+    remove(Alpha, Conjunction, Temporary), 
+    Newconone = [Alphaone | Temporary],
+    Newcontwo = [Alphatwo | Temporary], 
     New = [Newconone, Newcontwo | Rest].
 
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
 
-expand(Dis, Newdis) :- singlestep(Dis, Temp), expand(Temp, Newdis).
+expand(Dis, Newdis) :- singlestep(Dis, Temp), resolution(Temp, Newtemp), expand(Newtemp, Newdis).
 expand(Dis, Dis).
+
+resolution(List, Newnewlist) :- resolutionstep(List, Newlist), resolution(Newlist, Newnewlist).
+resolution(List, Newnewlist) :- resolutionstep_neg(List, Newlist), resolution(Newlist, Newnewlist).
+
+resolution(List, List).
+
+resolutionstep([[Head|Temp]|Tail], Newlist) :- 
+    member([neg(Head)], Tail), /* Finds if there is a neg version of the first value in the list of disj */
+    remove([neg(Head)], Tail, List1),
+    remove(Head, [Head|Temp], List2),
+    append(List1, List2, Newlist).
+
+resolutionstep_neg([[Head|Temp]|Tail], Newlist) :- 
+    unary(neg(Head)), /* deal with any double complements */
+    component(neg(Head), New),
+    member([New], Tail), /* Finds if there is a neg version of the first value in the list of disj */
+    remove([New], Tail, List1),
+    remove(Head, [Head|Temp], List2),
+    append(List1, List2, Newlist).
+
+/*
+Need to remove all occurrences of X in one list, and neg(X) in the other list,
+If X is present in one and neg(X) in the other.
+Call member?
+
+After singlestep, check if in one list there is a formula X and in another list neg(X) is present
+If so, call remove to remove neg(X) and X, and return a new list with all the values of the 
+two lists without X and neg(X)
+
+remove(X, [ ], [ ]).
+remove(X, [neg(X) | Tail], Newtail) :- remove(neg(X), Tail , Newtail).
+remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
+
+resolution(A, B) :- resolutionstep(A, X), resolution(X, B).
+resolution(A, A).*/
 
 clauseform(X, Y) :- expand([[X]], Y).
 
