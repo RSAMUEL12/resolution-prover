@@ -115,8 +115,57 @@ singlestep([Conjunction | Rest], New) :-
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
 
-expand(Dis, Newdis) :- singlestep(Dis, Temp), resolution(Temp, Newtemp), expand(Newtemp, Newdis).
-expand(Dis, Dis).
+expand_and_close(Tableau) :- closed(Tableau).
+expand_and_close(Tableau) :-
+    singlestep(Tableau, Newtableau),
+    !,
+    expand_and_close(Newtableau).
+
+/*closed(Resolution) :- every branch of Tableau contains a contradiction */
+
+closed([Head1 | Rest]) :-
+    member(X, Head1),
+    member(Y, Rest),
+    member(neg X, Y),
+    remove(X, Head1, List1),
+    remove(neg X, Y, List2), 
+    remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
+    append(List1, List2, Newlist),
+    append(Newlist, Newrest, Result),
+    closed(Result).
+
+/* Deal with double complement */
+closed([Head1 | Rest]) :-
+    member(X, Head1),
+    member(Y, Rest),
+    unary(neg X),
+    component(neg X, NewX),
+    member(NewX, Y),
+    remove(X, Head1, List1),
+    remove(NewX, Y, List2), 
+    remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
+    append(List1, List2, Newlist),
+    append(Newlist, Newrest, Result),
+    closed(Result).
+
+closed([]).
+
+/* test(X) :- create a complete tableau expansion for neg X and see if it is closed. */
+
+/* 
+expand_and_close(Tableau) :- some expansion of Tableaus closes
+
+expand_and_close(Tableau) :- closed(Tableau).
+expand_and_close(Tableau) :-
+    singlestep(Tableau, Newtableau),
+    !,
+    expand_and_close(Newtableau).
+*/
+
+/* Create tableau expansion for neg X, if closed, we have a proof, otherwise no. */
+/*
+test(X) :- 
+    if_then_else(expand_and_close([[neg X]]), yes, no) */
 
 resolution(List, Final) :- resolutionstep(List, [[H | T] | Tail]), resolution([T | Tail], Result), attachHead(H, Result, Final).
 resolution(List, List).
@@ -172,6 +221,12 @@ remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
 resolution(A, B) :- resolutionstep(A, X), resolution(X, B).
 resolution(A, A).*/
 
-clauseform(X, Y) :- expand([[X]], Y).
+test(X) :- 
+    if_then_else(expand_and_close([[neg X]]), yes, no).
 
+if_then_else(P, Q, R) :- P, !, Q.
+if_then_else(P, Q, R) :- R.
+
+yes :- write("Resolution theorem").
+no :- write("not a resolution theorem").
 
