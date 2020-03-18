@@ -18,6 +18,10 @@ remove(X, [ ], [ ]).
 remove(X, [X | Tail], Newtail) :- remove(X, Tail , Newtail).
 remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
 
+removeAll(X, [ ], [ ]) :- !.
+removeAll(X, [X | Tail], Newtail) :- !, remove(X, Tail , Newtail).
+removeAll(X, [Head | Tail], [Head | Newtail]) :- !, remove(X, Tail, Newtail).
+
 /* conjunction(X) :- X is an alpha formula.
  */
 
@@ -29,8 +33,6 @@ conjunctive(neg(_ uparrow _)).
 conjunctive(_ downarrow _).
 conjunctive(_ notimp _).
 conjunctive(_ notrevimp _).
-conjunctive(_ equiv _).
-conjunctive(neg(_ notequiv _)).
 
 /* disjunctive(X) :- X is a beta formula. */
 
@@ -44,6 +46,8 @@ disjunctive(neg(_ notimp _)).
 disjunctive(neg(_ notrevimp _)).
 disjunctive(_ notequiv _).
 disjunctive(neg(_ equiv _)).
+disjunctive(_ equiv _).
+disjunctive(neg(_ notequiv _)).
 
 /* unary(X) :- X is a double negation or a negated constant. */
 
@@ -71,10 +75,10 @@ components(neg(X notimp Y), neg X, Y).
 components(X notrevimp Y, neg X, Y).
 components(neg(X notrevimp Y), X, neg Y).
 /* New equiv and notequiv components */
-components(X equiv Y, X imp Y, Y imp X).
-components(neg(X equiv Y), neg(X imp Y), neg(Y imp X)).
-components(X notequiv Y, neg(X imp Y), neg(Y imp X)).
-components(neg(X notequiv Y), X imp Y, Y imp X).
+components(X equiv Y, neg X and neg Y, X and Y).
+components(neg(X equiv Y), neg X and Y, X and neg Y).
+components(X notequiv Y, neg X and Y, X and neg Y).
+components(neg(X notequiv Y), neg X and neg Y, X and Y).
 /*
 components(X equiv Y, neg X and neg Y , X or Y).
 components(neg(X equiv Y), neg X and Y, X and neg Y).
@@ -127,12 +131,16 @@ closed([Head1 | Rest]) :-
     member(X, Head1),
     member(Y, Rest),
     member(neg X, Y),
+    !,
     remove(X, Head1, List1),
     remove(neg X, Y, List2), 
     remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
+    !,
     append(List1, List2, Newlist),
-    append(Newlist, Newrest, Result),
-    closed(Result).
+    Result = [Newlist | Newrest],
+    checkEmptyList(Result, Newresult),
+    closed(Newresult),
+    !.
 
 /* Deal with double complement */
 closed([Head1 | Rest]) :-
@@ -141,14 +149,32 @@ closed([Head1 | Rest]) :-
     unary(neg X),
     component(neg X, NewX),
     member(NewX, Y),
+    !,
     remove(X, Head1, List1),
     remove(NewX, Y, List2), 
     remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
+    !,
     append(List1, List2, Newlist),
-    append(Newlist, Newrest, Result),
-    closed(Result).
+    Result = [Newlist | Newrest],
+    checkEmptyList(Result, Newresult),
+    closed(Newresult),
+    !.
 
 closed([]).
+
+checkEmptyList(List, []) :- member([], List).
+checkEmptyList(List, List).
+
+/* 
+Iterates through each value to try all combinations to make an empty list
+
+member(X, [[a, neg b],[neg b],[a,neg a,b]]),
+member(Y, X),
+member(Z, [[a,b],[neg b],[a,neg a,b]]),
+not(Z = X),
+member(neg Y, Z). 
+*/
+
 
 /* test(X) :- create a complete tableau expansion for neg X and see if it is closed. */
 
