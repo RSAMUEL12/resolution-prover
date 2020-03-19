@@ -119,62 +119,13 @@ singlestep([Conjunction | Rest], New) :-
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
 
-expand_and_close(Tableau, Final) :-
+expand_and_close(Tableau) :- closed(Tableau).
+expand_and_close(Tableau) :-
     singlestep(Tableau, Newtableau),
-    expand_and_close(Newtableau, Final).
-
-expand_and_close(List, List).
-
-resolution(Proof) :- expand_and_close([[neg Proof]], Conj), !, closed(Conj).
+    !,
+    expand_and_close(Newtableau).
 
 /*closed(Resolution) :- every branch of Tableau contains a contradiction */
-
-resolutionstep(Proof) :-
-    /* Finding 2 disjunctions and an element X in one, neg X in the other */
-    member(Disj1, Proof),
-    member(X, Disj1),
-    member(Disj2, Proof),
-    not(Disj1 = Disj2),
-    member(neg X, Disj2),
-    !,
-    /* Remove the X and neg X */
-    /* Remove the two disjunctions from the Conj */
-    /* Add the new resolvent to the Conj */
-    remove(X, Disj1, Newdisj1),
-    remove(neg X, Disj2, Newdisj2),
-    append(Newdisj1, Newdisj2, Resolvent),
-    remove(Disj1, Proof, Newproof),
-    remove(Disj2, Newproof, Newproof),
-    !,
-    Final = [Resolvent | Proof],
-    checkEmptyList(Final, Empty),
-    closed(Empty).
-
-/* Deal with double complement */
-resolutionstep(Proof) :-
-    /* Finding 2 disjunctions and an element X in one, neg X in the other */
-    member(Disj1, Proof),
-    member(X, Disj1),
-    member(Disj2, Proof),
-    not(Disj1 = Disj2),
-    component(neg X, A),
-    member(A, Disj2),
-    !,
-    /* Remove the X and neg X */
-    /* Remove the two disjunctions from the Conj */
-    /* Add the new resolvent to the Conj */
-    remove(X, Disj1, Newdisj1),
-    remove(A, Disj2, Newdisj2),
-    append(Newdisj1, Newdisj2, Resolvent),
-    remove(Disj1, Proof, Newproof),
-    remove(Disj2, Newproof, Newproof),
-    !,
-    Final = [Resolvent | Proof],
-    checkEmptyList(Final, Empty),
-    closed(Empty).
-
-resolutionstep([]).
-    
 
 closed([Head1 | Rest]) :-
     member(X, Head1),
@@ -224,8 +175,80 @@ not(Z = X),
 member(neg Y, Z). 
 */
 
+
+/* test(X) :- create a complete tableau expansion for neg X and see if it is closed. */
+
+/* 
+expand_and_close(Tableau) :- some expansion of Tableaus closes
+
+expand_and_close(Tableau) :- closed(Tableau).
+expand_and_close(Tableau) :-
+    singlestep(Tableau, Newtableau),
+    !,
+    expand_and_close(Newtableau).
+*/
+
+/* Create tableau expansion for neg X, if closed, we have a proof, otherwise no. */
+/*
 test(X) :- 
-    if_then_else(expand_and_close([[neg X]], Result), yes, no).
+    if_then_else(expand_and_close([[neg X]]), yes, no) */
+
+resolution(List, Final) :- resolutionstep(List, [[H | T] | Tail]), resolution([T | Tail], Result), attachHead(H, Result, Final).
+resolution(List, List).
+
+resolutionstep([[H | T], Head2 | Tail], Result) :-
+    member(neg(H), Head2),
+    remove(neg(H), Head2, List1),
+    remove(H, [H | T], List2),
+    append(List1, List2, Newlist),
+    Result = [Newlist | Tail].
+
+/*resolutionstep([[H | T], Head2 | Tail], []).*/
+
+/* Dealing with double complements */
+resolutionstep([[H | T], Head2 | Tail], Result) :-
+    unary(neg(H)),
+    component(neg(H), NewH),
+    member(NewH, Head2),
+    remove(NewH, Head2, List1),
+    remove(H, [H | T], List2),
+    append(List1, List2, Newlist),
+    Result = [Newlist | Tail].
+
+resolutionstep([Head1, Head2, Head3 | Tail], Newlist) :-
+    resolutionstep([Head1, Head3 | Tail], List2), !,
+    append(List2, [Head2], Newlist).
+
+resolutionstep([Head1, Head2 | [ ]], [Head1, Head2 | [ ]]).
+
+/* Adding back the first element of the list to the head */
+attachHead(H, [Head | Tail], Newlist) :-
+    Newhead = [H | Head],
+    append([Newhead], Tail, Newlist).
+
+attachHead(H, [Head], [Newhead]) :-
+    Newhead = [[H] | Head].
+
+attachHead(H, [[ ]], [[H]]).
+
+/*
+Need to remove all occurrences of X in one list, and neg(X) in the other list,
+If X is present in one and neg(X) in the other.
+Call member?
+
+After singlestep, check if in one list there is a formula X and in another list neg(X) is present
+If so, call remove to remove neg(X) and X, and return a new list with all the values of the 
+two lists without X and neg(X)
+
+remove(X, [ ], [ ]).
+remove(X, [neg(X) | Tail], Newtail) :- remove(neg(X), Tail , Newtail).
+remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
+
+resolution(A, B) :- resolutionstep(A, X), resolution(X, B).
+resolution(A, A).*/
+
+test(X) :- 
+    if_then_else(expand_and_close([[neg X]]), yes, no).
 
 if_then_else(P, Q, R) :- P, !, Q.
 if_then_else(P, Q, R) :- R.
