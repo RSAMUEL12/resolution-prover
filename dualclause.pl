@@ -18,10 +18,6 @@ remove(X, [ ], [ ]).
 remove(X, [X | Tail], Newtail) :- remove(X, Tail , Newtail).
 remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
 
-removeAll(X, [ ], [ ]) :- !.
-removeAll(X, [X | Tail], Newtail) :- !, remove(X, Tail , Newtail).
-removeAll(X, [Head | Tail], [Head | Newtail]) :- !, remove(X, Tail, Newtail).
-
 /* conjunction(X) :- X is an alpha formula.
  */
 
@@ -119,51 +115,40 @@ singlestep([Conjunction | Rest], New) :-
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
 
-expand_and_close(Tableau) :- closed(Tableau).
 expand_and_close(Tableau) :-
     singlestep(Tableau, Newtableau),
     !,
     expand_and_close(Newtableau).
 
+expand_and_close(Tableau) :- 
+    writeln(Tableau), 
+    deleteTrue(Tableau, Newtableau), 
+    writeln(Newtableau),
+    resolution(Newtableau, Final),
+    isEmpty(Final).
+    
 /*closed(Resolution) :- every branch of Tableau contains a contradiction */
 
-closed([Head1 | Rest]) :-
-    member(X, Head1),
-    member(Y, Rest),
-    member(neg X, Y),
-    !,
-    remove(X, Head1, List1),
-    remove(neg X, Y, List2), 
-    remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
-    !,
-    append(List1, List2, Newlist),
-    Result = [Newlist | Newrest],
-    checkEmptyList(Result, Newresult),
-    (closed(Newresult); closed(Rest)),
-    !.
-
-/* Deal with double complement */
-closed([Head1 | Rest]) :-
-    member(X, Head1),
-    member(Y, Rest),
-    unary(neg X),
-    component(neg X, NewX),
-    member(NewX, Y),
-    !,
-    remove(X, Head1, List1),
-    remove(NewX, Y, List2), 
-    remove(Y, Rest, Newrest), /* Remove the subset Y where neg X is */
-    !,
-    append(List1, List2, Newlist),
-    Result = [Newlist | Newrest],
-    checkEmptyList(Result, Newresult),
-    (closed(Newresult); closed(Rest)),
-    !.
-
-closed([]).
+isEmpty(List) :- member([], List).
 
 checkEmptyList(List, []) :- member([], List).
 checkEmptyList(List, List).
+
+deleteTrue(List, Final) :-
+    member(Sublist, List),
+    member(Var, Sublist),
+    (unary(neg Var) -> component(neg Var, Compliment); Compliment = neg Var),
+    member(Compliment, Sublist),
+    remove(Compliment, Sublist, Newsub1),
+    remove(Var, Newsub1, Newsub2),
+    remove(Sublist, List, Newlist),
+    append([Newsub2], Newlist, Result),
+    removeEmpty(Result, Newresult),
+    deleteTrue(Newresult, Final).
+deleteTrue(List, List).
+
+removeEmpty(List, Newlist) :- member([], List), remove([], List, Newlist).
+removeEmpty(List, List).
 
 /* 
 Iterates through each value to try all combinations to make an empty list
@@ -193,43 +178,21 @@ expand_and_close(Tableau) :-
 test(X) :- 
     if_then_else(expand_and_close([[neg X]]), yes, no) */
 
-resolution(List, Final) :- resolutionstep(List, [[H | T] | Tail]), resolution([T | Tail], Result), attachHead(H, Result, Final).
-resolution(List, List).
+resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Newcon), resolution(Newcon, Resolvent).
+resolution(Conjunction, Conjunction).
+resolution([], []).
 
-resolutionstep([[H | T], Head2 | Tail], Result) :-
-    member(neg(H), Head2),
-    remove(neg(H), Head2, List1),
-    remove(H, [H | T], List2),
+resolutionstep([Head1 | Tail], Newresult) :-
+    member(X, Head1),
+    member(Y, Tail),
+    (unary(neg X) -> component(neg X, A); A = neg X),
+    member(A, Y),
+    remove(X, Head1, List1),
+    remove(A, Y, List2), /* removes the complement of X from the element in Tail*/
+    remove(Y, Tail, Newtail), /* Remove the subset Y where neg X is */
     append(List1, List2, Newlist),
-    Result = [Newlist | Tail].
-
-/*resolutionstep([[H | T], Head2 | Tail], []).*/
-
-/* Dealing with double complements */
-resolutionstep([[H | T], Head2 | Tail], Result) :-
-    unary(neg(H)),
-    component(neg(H), NewH),
-    member(NewH, Head2),
-    remove(NewH, Head2, List1),
-    remove(H, [H | T], List2),
-    append(List1, List2, Newlist),
-    Result = [Newlist | Tail].
-
-resolutionstep([Head1, Head2, Head3 | Tail], Newlist) :-
-    resolutionstep([Head1, Head3 | Tail], List2), !,
-    append(List2, [Head2], Newlist).
-
-resolutionstep([Head1, Head2 | [ ]], [Head1, Head2 | [ ]]).
-
-/* Adding back the first element of the list to the head */
-attachHead(H, [Head | Tail], Newlist) :-
-    Newhead = [H | Head],
-    append([Newhead], Tail, Newlist).
-
-attachHead(H, [Head], [Newhead]) :-
-    Newhead = [[H] | Head].
-
-attachHead(H, [[ ]], [[H]]).
+    Result = [Newlist | Newtail],
+    checkEmptyList(Result, Newresult). /* If an empty clause is present, then it is closed.*/ 
 
 /*
 Need to remove all occurrences of X in one list, and neg(X) in the other list,
@@ -253,6 +216,6 @@ test(X) :-
 if_then_else(P, Q, R) :- P, !, Q.
 if_then_else(P, Q, R) :- R.
 
-yes :- write("Resolution theorem").
-no :- write("not a resolution theorem").
+yes :- write("YES, Resolution theorem").
+no :- write("NO, not a resolution theorem").
 
