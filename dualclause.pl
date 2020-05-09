@@ -1,5 +1,19 @@
 /* Dual Clause Form Program */
 
+/*
+Outputs from Test Data
+    1. YES
+    2. YES
+    3. YES
+    4. NO
+    5. YES
+    6.
+    7. YES
+    8. NO
+    9. NO
+    10. YES
+*/
+
 ?-op(140, fy, neg).
 ?-op(160, xfy, [and, or, imp, revimp, uparrow, downarrow, 
                notimp, notrevimp, equiv, notequiv]).
@@ -125,10 +139,9 @@ expand_and_close(Conjunction) :-
     sort(Conjunction, Sorted), !,
     deleteTrue(Sorted, Newcon),
     deleteDupVars(Newcon, Unique),
+    (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
     write("Optimisation: "),
     writeln(Unique),
-    (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
-    !,
     resolution(Unique, Final),
     isEmpty(Final).
     
@@ -159,43 +172,15 @@ deleteDupVars([Head | Tail], Newresult) :-
     !.
 deleteDupVars(List, List).
 
+/* removes any empty list in List */
 removeEmpty(List, Newlist) :- member([], List), remove([], List, Newlist).
 removeEmpty(List, List).
-
-/* 
-Iterates through each value to try all combinations to make an empty list
-
-member(X, [[a, neg b],[neg b],[a,neg a,b]]),
-member(Y, X),
-member(Z, [[a,b],[neg b],[a,neg a,b]]),
-not(Z = X),
-member(neg Y, Z). 
-*/
-
-
-/* test(X) :- create a complete tableau expansion for neg X and see if it is closed. */
-
-/* 
-expand_and_close(Tableau) :- some expansion of Tableaus closes
-
-expand_and_close(Tableau) :- closed(Tableau).
-expand_and_close(Tableau) :-
-    singlestep(Tableau, Newtableau),
-    !,
-    expand_and_close(Newtableau).
-*/
-
-/* Create tableau expansion for neg X, if closed, we have a proof, otherwise no. */
-/*
-test(X) :- 
-    if_then_else(expand_and_close([[neg X]]), yes, no) */
 
 resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Resolvent).
 resolution(Conjunction, Conjunction).
 resolution([], []).
 
 resolutionstep(List, Final) :-
-    writeln(List),
     member(X, List), /* gets 2 sublists to find X and ¬X */
     member(Y, List),
     not(same(X, Y)), /* makes sure they are not the same */
@@ -217,24 +202,18 @@ removeClause(X1, D1, X2, D2, Conjunction, Final) :-
     append([Resolvent], Newnewcon, Final),
     !.
 
+/* removes single occurrence of an element from a list */
 removeOne(_, [], []).
 removeOne(Term, [Term|Tail], Tail).
 removeOne(Term, [Head|Tail], [Head|Result]) :-
   removeOne(Term, Tail, Result).
 
-
+/* checks if two given lists are the same */
 same([], []).
 same([H1|R1], [H2|R2]):-
     H1 = H2,
     same(R1, R2).
 
-check(List, X, Y) :-
-    member(X, List),
-    member(Y, List),
-    not(same(X,Y)),
-    member(E1, X),
-    (unary(neg E1) -> component(neg E1, A); A = neg E1),
-    member(A, Y).
 /*
 Need to remove all occurrences of X in one list, and neg(X) in the other list,
 If X is present in one and neg(X) in the other.
