@@ -118,34 +118,46 @@ singlestep([Conjunction|Rest], [Conjunction|Newrest]) :-
 expand_and_close(Tableau) :-
     singlestep(Tableau, Newtableau),
     !,
-    expand_and_close(Newtableau).
+    expand_and_close(Newtableau),
+    !.
 
-expand_and_close(Tableau) :- 
-    writeln(Tableau), 
-    deleteTrue(Tableau, Newtableau), 
-    writeln(Newtableau),
-    resolution(Newtableau, Final),
+expand_and_close(Conjunction) :- 
+    sort(Conjunction, Sorted), !,
+    deleteTrue(Sorted, Newcon),
+    deleteDupVars(Newcon, Unique),
+    write("Optimisation: "),
+    writeln(Unique),
+    (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
+    !,
+    resolution(Unique, Final),
     isEmpty(Final).
     
 /*closed(Resolution) :- every branch of Tableau contains a contradiction */
 
-isEmpty(List) :- member([], List).
+isEmpty([]).
 
 checkEmptyList(List, []) :- member([], List).
 checkEmptyList(List, List).
 
+/* Deletes clauses that evaluate to true */
 deleteTrue(List, Final) :-
     member(Sublist, List),
     member(Var, Sublist),
     (unary(neg Var) -> component(neg Var, Compliment); Compliment = neg Var),
     member(Compliment, Sublist),
-    remove(Compliment, Sublist, Newsub1),
-    remove(Var, Newsub1, Newsub2),
     remove(Sublist, List, Newlist),
-    append([Newsub2], Newlist, Result),
-    removeEmpty(Result, Newresult),
-    deleteTrue(Newresult, Final).
+    removeEmpty(Newlist, Result),
+    deleteTrue(Result, Final),
+    !.
 deleteTrue(List, List).
+
+/* Function to delete duplicate variables in each clause */
+deleteDupVars([Head | Tail], Newresult) :-
+    sort(Head, Sublist),
+    deleteDupVars(Tail, Result),
+    append([Sublist], Result, Newresult),
+    !.
+deleteDupVars(List, List).
 
 removeEmpty(List, Newlist) :- member([], List), remove([], List, Newlist).
 removeEmpty(List, List).
@@ -178,22 +190,51 @@ expand_and_close(Tableau) :-
 test(X) :- 
     if_then_else(expand_and_close([[neg X]]), yes, no) */
 
-resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Newcon), resolution(Newcon, Resolvent).
+resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Resolvent).
 resolution(Conjunction, Conjunction).
 resolution([], []).
 
-resolutionstep([Head1 | Tail], Newresult) :-
-    member(X, Head1),
-    member(Y, Tail),
-    (unary(neg X) -> component(neg X, A); A = neg X),
-    member(A, Y),
-    remove(X, Head1, List1),
-    remove(A, Y, List2), /* removes the complement of X from the element in Tail*/
-    remove(Y, Tail, Newtail), /* Remove the subset Y where neg X is */
-    append(List1, List2, Newlist),
-    Result = [Newlist | Newtail],
-    checkEmptyList(Result, Newresult). /* If an empty clause is present, then it is closed.*/ 
+resolutionstep(List, Final) :-
+    writeln(List),
+    member(X, List), /* gets 2 sublists to find X and ¬X */
+    member(Y, List),
+    not(same(X, Y)), /* makes sure they are not the same */
+    member(E1, X), /* finds a member in sublist 1 */
+    (unary(neg E1) -> component(neg E1, A); A = neg E1), /* gets compliment of element */
+    member(A, Y), /* checks if complement is in the sublist 2 */
+    removeClause(E1, X, A, Y, List, Result),
+    checkEmptyList(Result, Newresult),
+    resolutionstep(Newresult, Final). /* If an empty clause is present, then it is closed.*/ 
+resolutionstep([], []).
 
+removeClause(X1, D1, X2, D2, Conjunction, Final) :-
+    remove(X1, D1, NewD1),
+    remove(X2, D2, NewD2),
+    append(NewD1, NewD2, Resolvent),
+    /* Now removes the disjunctions in place of Resolvent */
+    removeOne(D1, Conjunction, Newcon),
+    removeOne(D2, Newcon, Newnewcon),
+    append([Resolvent], Newnewcon, Final),
+    !.
+
+removeOne(_, [], []).
+removeOne(Term, [Term|Tail], Tail).
+removeOne(Term, [Head|Tail], [Head|Result]) :-
+  removeOne(Term, Tail, Result).
+
+
+same([], []).
+same([H1|R1], [H2|R2]):-
+    H1 = H2,
+    same(R1, R2).
+
+check(List, X, Y) :-
+    member(X, List),
+    member(Y, List),
+    not(same(X,Y)),
+    member(E1, X),
+    (unary(neg E1) -> component(neg E1, A); A = neg E1),
+    member(A, Y).
 /*
 Need to remove all occurrences of X in one list, and neg(X) in the other list,
 If X is present in one and neg(X) in the other.
