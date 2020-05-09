@@ -7,7 +7,7 @@ Outputs from Test Data
     3. YES
     4. NO
     5. YES
-    6.
+    6. YES (long run-time to achieve output)
     7. YES
     8. NO
     9. NO
@@ -140,9 +140,11 @@ expand_and_close(Conjunction) :-
     deleteTrue(Sorted, Newcon),
     deleteDupVars(Newcon, Unique),
     (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
-    write("Optimisation: "),
-    writeln(Unique),
-    resolution(Unique, Final),
+    checkFalse(Unique, List), /*checks if a clause contains only false, then it can never be true*/
+    !,
+    writeln("THIS IS AN OPTIMISED CNF"),
+    writeln(List),
+    resolution(List, Final),
     isEmpty(Final).
     
 /*closed(Resolution) :- every branch of Tableau contains a contradiction */
@@ -152,17 +154,29 @@ isEmpty([]).
 checkEmptyList(List, []) :- member([], List).
 checkEmptyList(List, List).
 
+checkFalse(List, []) :- member([false], List).
+checkFalse(List, List).
+
 /* Deletes clauses that evaluate to true */
 deleteTrue(List, Final) :-
     member(Sublist, List),
     member(Var, Sublist),
     (unary(neg Var) -> component(neg Var, Compliment); Compliment = neg Var),
-    member(Compliment, Sublist),
+    (member(Compliment, Sublist); member(true, Sublist)),
     remove(Sublist, List, Newlist),
     removeEmpty(Newlist, Result),
     deleteTrue(Result, Final),
     !.
 deleteTrue(List, List).
+
+removeFalse([Head | Tail], Final) :-
+    member(false, Head),
+    remove(false, Head, Newhead),
+    removeFalse(Tail, Result),
+    append([Newhead], Result, Merged),
+    removeEmpty(Merged, Final).
+removeFalse(List, List).
+
 
 /* Function to delete duplicate variables in each clause */
 deleteDupVars([Head | Tail], Newresult) :-
@@ -176,10 +190,11 @@ deleteDupVars(List, List).
 removeEmpty(List, Newlist) :- member([], List), remove([], List, Newlist).
 removeEmpty(List, List).
 
-resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Resolvent).
-resolution(Conjunction, Conjunction).
+resolution(Conjunction, Resolvent) :- resolutionstep(Conjunction, Resolvent), !.
+resolution(Conjunction, Conjunction). /* if it can't find the empty list, then it is not a resolution theorem */
 resolution([], []).
 
+resolutionstep([], []).
 resolutionstep(List, Final) :-
     member(X, List), /* gets 2 sublists to find X and ¬X */
     member(Y, List),
@@ -190,7 +205,6 @@ resolutionstep(List, Final) :-
     removeClause(E1, X, A, Y, List, Result),
     checkEmptyList(Result, Newresult),
     resolutionstep(Newresult, Final). /* If an empty clause is present, then it is closed.*/ 
-resolutionstep([], []).
 
 removeClause(X1, D1, X2, D2, Conjunction, Final) :-
     remove(X1, D1, NewD1),
