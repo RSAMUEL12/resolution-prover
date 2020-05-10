@@ -7,7 +7,7 @@ Outputs from Test Data
     3. YES
     4. NO
     5. YES
-    6. YES (long run-time to achieve output)
+    6. YES (around 20 mins to complete execution)
     7. YES
     8. NO
     9. NO
@@ -141,10 +141,9 @@ expand_and_close(Conjunction) :-
     deleteDupVars(Newcon, Unique),
     (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
     checkFalse(Unique, List), /*checks if a clause contains only false, then it can never be true*/
+    removeFalse(List, Newlist),
     !,
-    writeln("THIS IS AN OPTIMISED CNF"),
-    writeln(List),
-    resolution(List, Final),
+    resolution(Newlist, Final),
     isEmpty(Final).
     
 /*closed(Resolution) :- every branch of Tableau contains a contradiction */
@@ -169,14 +168,16 @@ deleteTrue(List, Final) :-
     !.
 deleteTrue(List, List).
 
-removeFalse([Head | Tail], Final) :-
-    member(false, Head),
-    remove(false, Head, Newhead),
-    removeFalse(Tail, Result),
-    append([Newhead], Result, Merged),
-    removeEmpty(Merged, Final).
+removeFalse(List, Newfinal) :-
+    member(Sub, List),
+    member(false, Sub),
+    remove(false, Sub, Newsub),
+    remove(Sub, List, Newlist),
+    removeFalse(Newlist, Result),
+    append([Newsub], Result, Final),
+    removeEmpty(Final, Newfinal),
+    !.
 removeFalse(List, List).
-
 
 /* Function to delete duplicate variables in each clause */
 deleteDupVars([Head | Tail], Newresult) :-
@@ -244,12 +245,15 @@ remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
 resolution(A, B) :- resolutionstep(A, X), resolution(X, B).
 resolution(A, A).*/
 
-test(X) :- 
-    if_then_else(expand_and_close([[neg X]]), yes, no).
+test(X) :-
+    statistics(walltime, [TimeSinceStart | [TimeSinceLastCall]]),
+    if_then_else(expand_and_close([[neg X]]), yes, no),
+    statistics(walltime, [NewTimeSinceStart | [ExecutionTime]]),
+    write('Execution took '), write(ExecutionTime), write(' ms.'), nl. 
 
 if_then_else(P, Q, R) :- P, !, Q.
 if_then_else(P, Q, R) :- R.
 
-yes :- write("YES, Resolution theorem").
-no :- write("NO, not a resolution theorem").
+yes :- writeln("YES, Resolution theorem").
+no :- writeln("NO, not a resolution theorem").
 
