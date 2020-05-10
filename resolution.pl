@@ -1,4 +1,4 @@
-/* Dual Clause Form Program */
+/* Dual Clause Form Program  | CS262 Logic and Verification */
 
 /*
 Outputs from Test Data
@@ -129,17 +129,25 @@ singlestep([Conjunction | Rest], New) :-
 singlestep([Conjunction|Rest], [Conjunction|Newrest]) :- 
     singlestep(Rest, Newrest).
 
-expand_and_close(Tableau) :-
-    singlestep(Tableau, Newtableau),
-    !,
-    expand_and_close(Newtableau),
-    !.
+/* returns CNF of Formula */
+clauseform(Formula, Conjunction) :- expand_and_close([[Formula]], Conjunction).
 
-expand_and_close(Conjunction) :- 
+expand_and_close(Formula, NormalForm) :-
+    singlestep(Formula, Conjunction),
+    !,
+    expand_and_close(Conjunction, NormalForm),
+    !.
+expand_and_close(List, List).
+
+resolve(Formula) :- 
+    clauseform(Formula, Conjunction), !,
+    writeln(Conjunction),
     sort(Conjunction, Sorted), !,
     deleteTrue(Sorted, Newcon),
     deleteDupVars(Newcon, Unique),
-    (not(isEmpty(Unique)) ; fail), /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
+    /* If the empty list is present before resolution, then there is no contradiction hence not a res. theorem */
+    /* Newcon can be empty if deleteTrue causes Unique = [[]] meaning that the CNF is always true */
+    (not(isEmpty(Unique)) ; fail),
     checkFalse(Unique, List), /*checks if a clause contains only false, then it can never be true*/
     removeFalse(List, Newlist),
     !,
@@ -150,13 +158,17 @@ expand_and_close(Conjunction) :-
 
 isEmpty([]).
 
+/* Checks to see if the empty list is present */
+/* If so, then the CNF of formula X is closed */
 checkEmptyList(List, []) :- member([], List).
 checkEmptyList(List, List).
 
+/* Checks to see if there is a clause with solely false as a variable */
+/* It will return the empty list because then the formula X given by the user cannot be true */
 checkFalse(List, []) :- member([false], List).
 checkFalse(List, List).
 
-/* Deletes clauses that evaluate to true */
+/* Deletes clauses that evaluate to true e.g. [a, neg a] is removed from the CNF*/
 deleteTrue(List, Final) :-
     member(Sublist, List),
     member(Var, Sublist),
@@ -168,6 +180,7 @@ deleteTrue(List, Final) :-
     !.
 deleteTrue(List, List).
 
+/* removes any false variables each clause in List */
 removeFalse(List, Newfinal) :-
     member(Sub, List),
     member(false, Sub),
@@ -207,6 +220,7 @@ resolutionstep(List, Final) :-
     checkEmptyList(Result, Newresult),
     resolutionstep(Newresult, Final). /* If an empty clause is present, then it is closed.*/ 
 
+/* Removes the variables X and ¬X from D1 and D2 to create the resolvent */
 removeClause(X1, D1, X2, D2, Conjunction, Final) :-
     remove(X1, D1, NewD1),
     remove(X2, D2, NewD2),
@@ -229,25 +243,9 @@ same([H1|R1], [H2|R2]):-
     H1 = H2,
     same(R1, R2).
 
-/*
-Need to remove all occurrences of X in one list, and neg(X) in the other list,
-If X is present in one and neg(X) in the other.
-Call member?
-
-After singlestep, check if in one list there is a formula X and in another list neg(X) is present
-If so, call remove to remove neg(X) and X, and return a new list with all the values of the 
-two lists without X and neg(X)
-
-remove(X, [ ], [ ]).
-remove(X, [neg(X) | Tail], Newtail) :- remove(neg(X), Tail , Newtail).
-remove(X, [Head | Tail], [Head | Newtail]) :- remove(X, Tail, Newtail).
-
-resolution(A, B) :- resolutionstep(A, X), resolution(X, B).
-resolution(A, A).*/
-
 test(X) :-
     statistics(walltime, [TimeSinceStart | [TimeSinceLastCall]]),
-    if_then_else(expand_and_close([[neg X]]), yes, no),
+    if_then_else(resolve(neg X), yes, no),
     statistics(walltime, [NewTimeSinceStart | [ExecutionTime]]),
     write('Execution took '), write(ExecutionTime), write(' ms.'), nl. 
 
